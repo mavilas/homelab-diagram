@@ -89,8 +89,8 @@ def device_card(c: Canvas, x, y, w, h, icons: Sequence[str], g: Mapping, color, 
     if g.get("ip"):
         host, hcol = hostname(g) if hostname else (None, None)
         addr(c, tx_, y + 48 + dy, g["ip"], color, host, hcol)
-    if g.get("os"):
-        c.text(tx_, y + 66, g["os"], 12, t.muted, 400)
+    if g.get("os"):                       # without an address line the OS moves up into its place
+        c.text(tx_, y + (66 if g.get("ip") else 48), g["os"], 12, t.muted, 400)
     if g.get("config"):                   # optional 4th line: how the device is set up
         c.text(tx_, y + 84, g["config"], 12, t.faint, 400)
 

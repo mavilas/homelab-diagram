@@ -1,4 +1,5 @@
 import hashlib
+import re
 import subprocess
 import sys
 import tempfile
@@ -48,6 +49,28 @@ class RenderTest(unittest.TestCase):
         text = render_svg(parse_spec(example_raw()), IconStore([ROOT / "icons"]))
         self.assertNotIn("http://", text.replace("http://www.w3.org/2000/svg", ""))
         self.assertNotIn("https://", text)
+
+    def test_group_link_ends_on_the_group_border(self):
+        raw = example_raw()
+        raw["links"] = [{"from": "proxy", "to": "storage", "color": "#123456"}]
+        spec = parse_spec(raw)
+        store = IconStore([ROOT / "icons"])
+        from homelab_diagram.canvas import Canvas
+        from homelab_diagram.layout import Layout
+        lay = Layout(spec, Canvas(spec.width, icons=store)).compute()
+        zone_top = [z for z in lay.zones if z[0].id == "storage"][0][2]
+        svg = render_svg(spec, store)
+        path = [ln for ln in svg.split("<path") if 'stroke="#123456"' in ln][0]
+        self.assertTrue(path.split('" fill')[0].endswith(f",{zone_top}"), path)
+
+    def test_device_without_address_moves_os_up(self):
+        raw = example_raw()
+        del raw["nodes"][0]["address"]
+        svg = render_svg(parse_spec(raw), IconStore([ROOT / "icons"]))
+        with_addr = render_svg(parse_spec(example_raw()), IconStore([ROOT / "icons"]))
+        def os_y(text):
+            return float(re.search(r'<text x="[^"]+" y="([^"]+)"[^>]*>OPNsense</text>', text).group(1))
+        self.assertEqual(os_y(with_addr) - os_y(svg), 18)
 
     def test_text_that_does_not_fit_raises_layout_error(self):
         raw = example_raw()

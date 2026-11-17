@@ -25,9 +25,9 @@ the group, default 1), `span` (group slots it takes, default 1). Groups fill row
 **Node:** `id` and `label` (required), `kind` (`service` card, the default, or `device` folder card), `group`,
 `icon`, `color` (default: the group color), `note`.
 A `device` also needs `type` (shown on the tab after the label) and may have `model`, `address`, `os` and
-`items` (up to 12 service rows with `label`, `note`, `icon`). Nodes without a group form a band at the top.
+`items` (up to 12 service rows with `label`, `note`, `icon`). Without `address`, the `os` line moves up. Node and group ids share one namespace. Nodes without a group form a band at the top.
 
-**Link:** `from`, `to` (node ids, required), `style` (`solid`, `dashed`, `dotted`), `color`, either `speed`
+**Link:** `from`, `to` (node or group ids, required; a group end attaches to the group border), `style` (`solid`, `dashed`, `dotted`), `color`, either `speed`
 or `width` (0.5 to 20), `label`. Same-row nodes connect side to side; otherwise the cable turns in the gap
 above the lower node's group. Keep linked nodes in adjacent rows for clean cables.
 

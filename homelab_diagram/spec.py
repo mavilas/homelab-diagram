@@ -233,14 +233,17 @@ def parse_spec(raw: Any) -> Spec:
                           _text(n.get("note"), f"{p}.note"), _icon(n.get("icon"), f"{p}.icon"),
                           _color(n.get("color"), f"{p}.color", accents), tuple(items)))
     node_ids = _unique([n.id for n in nodes], "nodes")
+    for nid in sorted(node_ids & group_ids):
+        raise SpecError(f"nodes: id {nid!r} is used by a group and a node")
+    endpoints = node_ids | group_ids
 
     links: list[Link] = []
     for i, ln in enumerate(_list(top.get("links"), "spec.links", MAX_LINKS)):
         p = f"links[{i}]"
         ln = _keys(ln, p, {"from", "to", "style", "color", "speed", "width", "label"}, {"from", "to"})
         for end in ("from", "to"):
-            if ln[end] not in node_ids:
-                raise SpecError(f"{p}.{end}: unknown node {ln[end]!r}")
+            if ln[end] not in endpoints:
+                raise SpecError(f"{p}.{end}: unknown node or group {ln[end]!r}")
         if ln["from"] == ln["to"]:
             raise SpecError(f"{p}: a link needs two different nodes")
         speed, width = _stroke(ln, p, speeds)

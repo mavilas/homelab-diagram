@@ -39,7 +39,7 @@ class SpecTest(unittest.TestCase):
         self.assertRejected(raw, "nodes[0].group: unknown group 'nope'")
         raw = example_raw()
         raw["links"][0]["to"] = "ghost"
-        self.assertRejected(raw, "links[0].to: unknown node 'ghost'")
+        self.assertRejected(raw, "links[0].to: unknown node or group 'ghost'")
 
     def test_duplicate_ids_and_self_links(self):
         raw = example_raw()
@@ -62,6 +62,18 @@ class SpecTest(unittest.TestCase):
         raw = example_raw()
         raw["nodes"][0]["label"] = "a\nb"
         self.assertRejected(raw, "nodes[0].label")
+
+    def test_links_may_target_a_group_and_ids_are_unique_across_nodes_and_groups(self):
+        raw = example_raw()
+        raw["links"].append({"from": "fw", "to": "storage", "label": "to the whole group"})
+        self.assertEqual(parse_spec(raw).links[-1].target, "storage")
+        raw = example_raw()
+        raw["nodes"][0]["id"] = "storage"
+        raw["links"] = []
+        self.assertRejected(raw, "id 'storage' is used by a group and a node")
+        raw = example_raw()
+        raw["links"][0]["to"] = "nowhere"
+        self.assertRejected(raw, "unknown node or group 'nowhere'")
 
     def test_version_device_type_and_bounds(self):
         raw = example_raw()

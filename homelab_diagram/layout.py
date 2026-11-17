@@ -215,10 +215,12 @@ def draw(spec: Spec, c: Canvas) -> str:
     for g, x, y, w, h in lay.zones:
         zone(c, x, y, w, h, t.color(g.color) or t.border, g.label, g.tag, g.note)
 
+    # a link may end on a group: it attaches to the group's border like a node's
+    ends = {g.id: Box(x, y, w, h, y, g.id, y) for g, x, y, w, h in lay.zones}
     channels: dict[float, int] = defaultdict(int)
     labels = []
     for ln, (sa, sb) in zip(spec.links, _spread(spec.links)):
-        a, b = lay.boxes[ln.source], lay.boxes[ln.target]
+        a, b = ends.get(ln.source) or lay.boxes[ln.source], ends.get(ln.target) or lay.boxes[ln.target]
         lower = b if b.top > a.top else a
         key = lower.zone_top if a.group != b.group else lower.top
         channels[key] += 1
