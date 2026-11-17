@@ -100,10 +100,14 @@ def materialize(icon: LockedIcon, raw: bytes) -> bytes:
     return raw
 
 
+ICON_MODE = 0o644   # renders run as another user (container), so icons must be world-readable
+
+
 def _atomic_write(path: Path, data: bytes) -> None:
-    fd, tmp = tempfile.mkstemp(dir=path.parent, prefix=f".{path.name}.")
+    fd, tmp = tempfile.mkstemp(dir=path.parent, prefix=f".{path.name}.")   # mkstemp creates 0600
     with os.fdopen(fd, "wb") as f:
         f.write(data)
+    os.chmod(tmp, ICON_MODE)
     os.replace(tmp, path)
 
 

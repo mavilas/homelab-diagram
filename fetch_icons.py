@@ -13,7 +13,7 @@ import argparse
 import pathlib
 import sys
 
-from homelab_diagram.icon_lock import DEFAULT_ICON_DIR, fetch, load_lock, verify, write_lock
+from homelab_diagram.icon_lock import DEFAULT_ICON_DIR, fetch, verify, write_lock
 
 
 def main(argv=None) -> int:

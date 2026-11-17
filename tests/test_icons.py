@@ -31,6 +31,12 @@ class IconLockTest(unittest.TestCase):
     def test_fetched_icons_match_the_lock(self):
         self.assertEqual(verify(ROOT / "icons"), [])
 
+    def test_fetched_icons_are_readable_by_other_users(self):
+        # Images run renders as an unprivileged user, so 0600 icon files break every render.
+        for icon in load_lock().icons:
+            mode = (ROOT / "icons" / f"{icon.name}.svg").stat().st_mode & 0o777
+            self.assertEqual(mode, 0o644, icon.name)
+
     def test_verify_reports_a_tampered_and_a_missing_icon(self):
         lock = load_lock()
         with tempfile.TemporaryDirectory() as tmp:
