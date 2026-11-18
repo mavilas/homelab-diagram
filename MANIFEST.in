@@ -1,0 +1,2 @@
+include icons.lock.json
+recursive-include icons glyph-*.svg

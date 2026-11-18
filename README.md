@@ -161,3 +161,18 @@ About 60 prompts went into this. Three typical ones, to give an idea of how the 
 - Code and the glyph icons in `icons/`: MIT, Copyright (c) 2026 Goblinmine, see [LICENSE](LICENSE). Fork changes are under the same license.
 - Service icons: [homarr-labs/dashboard-icons](https://github.com/homarr-labs/dashboard-icons), downloaded by `fetch_icons.py`, not part of this repo. The logos belong to their projects.
 - Fonts: [Fira Sans / Fira Code](https://github.com/mozilla/Fira) (SIL Open Font License), not included.
+
+### Spec and tool failure behavior
+
+Spec version must be an integer. JSON and YAML mapping keys must be unique
+strings; malformed reference types produce a validation error rather than a
+Python traceback. Font and renderer subprocesses use the vendored TERM-only
+process-group supervisor, whose source and digest are recorded in
+[the audit fix plan](docs/audits/2026-11-19-post-merge-fix-plan.md).
+A timed-out or failed converter cannot overwrite previous PNG or SVG outputs.
+Successful outputs are replaced atomically per file after conversion; publishing
+two files is not a filesystem transaction.
+
+Built distributions include the lock and the repository's own glyphs, generated
+from the canonical source files at build time. Third-party service icons still
+require the pinned fetch step or an explicit icon directory.

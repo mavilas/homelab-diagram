@@ -6,13 +6,12 @@ the offending path. See docs/spec.md for the format.
 """
 from __future__ import annotations
 
-import json
 import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Mapping
 
-import yaml
+from .documents import DocumentError, decode
 
 from .icons import NAME_RE as ICON_RE
 from .theme import THEMES
@@ -107,6 +106,8 @@ class Spec:
 def _keys(obj: Any, path: str, allowed: set[str], required: set[str]) -> Mapping[str, Any]:
     if not isinstance(obj, Mapping):
         raise SpecError(f"{path}: expected a mapping")
+    if any(not isinstance(key, str) for key in obj):
+        raise SpecError(f"{path}: keys must be strings")
     unknown = sorted(set(obj) - allowed)
     if unknown:
         raise SpecError(f"{path}: unknown key(s) {', '.join(map(str, unknown))}")
@@ -164,7 +165,7 @@ def _choice(v: Any, path: str, options: tuple[str, ...] | Mapping, default: str)
 
 def _stroke(raw: Mapping, path: str, speeds: Mapping[str, float]) -> tuple[str | None, float | None]:
     speed = raw.get("speed")
-    if speed is not None and speed not in speeds:
+    if speed is not None and (not isinstance(speed, str) or speed not in speeds):
         raise SpecError(f"{path}.speed: expected one of {', '.join(speeds)}")
     width = raw.get("width")
     if width is not None and (isinstance(width, bool) or not isinstance(width, (int, float)) or not 0.5 <= width <= 20):
@@ -187,7 +188,7 @@ def parse_spec(raw: Any) -> Spec:
     """Validate a decoded spec document and return the typed Spec."""
     top = _keys(raw, "spec", {"version", "title", "subtitle", "footer", "theme", "width", "columns",
                               "groups", "nodes", "links", "legend"}, {"version", "title", "nodes"})
-    if top["version"] != SPEC_VERSION:
+    if type(top["version"]) is not int or top["version"] != SPEC_VERSION:
         raise SpecError(f"spec.version: only version {SPEC_VERSION} is supported")
     theme_name = _choice(top.get("theme"), "spec.theme", tuple(THEMES), "dark")
     theme = THEMES[theme_name]
@@ -215,7 +216,7 @@ def parse_spec(raw: Any) -> Spec:
                          "color", "items"}, {"id", "label"})
         kind = _choice(n.get("kind"), f"{p}.kind", NODE_KINDS, "service")
         group = n.get("group")
-        if group is not None and group not in group_ids:
+        if group is not None and (not isinstance(group, str) or group not in group_ids):
             raise SpecError(f"{p}.group: unknown group {group!r}")
         items = []
         for j, it in enumerate(_list(n.get("items"), f"{p}.items", MAX_ITEMS)):
@@ -242,7 +243,7 @@ def parse_spec(raw: Any) -> Spec:
         p = f"links[{i}]"
         ln = _keys(ln, p, {"from", "to", "style", "color", "speed", "width", "label"}, {"from", "to"})
         for end in ("from", "to"):
-            if ln[end] not in endpoints:
+            if not isinstance(ln[end], str) or ln[end] not in endpoints:
                 raise SpecError(f"{p}.{end}: unknown node or group {ln[end]!r}")
         if ln["from"] == ln["to"]:
             raise SpecError(f"{p}: a link needs two different nodes")
@@ -279,10 +280,11 @@ def load_spec(path: Path | str) -> Spec:
     """Read a .yaml/.yml/.json spec file (YAML is parsed with safe_load)."""
     p = Path(path)
     text = p.read_text(encoding="utf-8")
-    if p.suffix.lower() == ".json":
-        raw = json.loads(text)
-    elif p.suffix.lower() in (".yaml", ".yml"):
-        raw = yaml.safe_load(text)
-    else:
+    extension = p.suffix.lower()
+    if extension not in (".json", ".yaml", ".yml"):
         raise SpecError(f"{p.name}: expected a .yaml, .yml or .json file")
+    try:
+        raw = decode(text, extension)
+    except DocumentError as error:
+        raise SpecError(f"{p.name}: {error}") from None
     return parse_spec(raw)

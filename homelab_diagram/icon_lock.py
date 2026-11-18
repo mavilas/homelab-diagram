@@ -19,7 +19,9 @@ from pathlib import Path
 
 from .icons import DEFAULT_ICON_DIR, NAME_RE, PACKAGE_ROOT
 
-LOCK_FILE = PACKAGE_ROOT / "icons.lock.json"
+from .resource_paths import LOCK_FILENAME
+
+LOCK_FILE = PACKAGE_ROOT / LOCK_FILENAME
 COMMIT_RE = re.compile(r"^[0-9a-f]{40}$")
 FETCH_TIMEOUT_S = 20
 FETCH_TRIES = 3

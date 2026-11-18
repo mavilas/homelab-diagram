@@ -5,3 +5,7 @@ __pycache__/
 icons/*
 !icons/glyph-*.svg
 *.egg-info/
+
+# Local distribution build outputs
+build/
+dist/
