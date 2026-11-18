@@ -11,8 +11,10 @@ import re
 from pathlib import Path
 from typing import Iterable, Sequence
 
-PACKAGE_ROOT = Path(__file__).resolve().parent.parent
-DEFAULT_ICON_DIR = PACKAGE_ROOT / "icons"
+from .resource_paths import ICON_DIRECTORY, RESOURCE_ROOT
+
+PACKAGE_ROOT = RESOURCE_ROOT
+DEFAULT_ICON_DIR = RESOURCE_ROOT / ICON_DIRECTORY
 NAME_RE = re.compile(r"^[a-z0-9][a-z0-9._-]{0,63}$")
 MIME = {".svg": "image/svg+xml", ".png": "image/png"}
 

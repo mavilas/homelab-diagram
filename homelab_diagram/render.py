@@ -39,15 +39,29 @@ def render(spec: Spec, png: Path | None, svg: Path | None = None, extra_icon_dir
     icons = IconStore(icon_dirs(extra_icon_dirs))
     text = render_svg(spec, icons)
     pre = preflight() if png else None
-    if svg:
-        Path(svg).parent.mkdir(parents=True, exist_ok=True)
-        Path(svg).write_text(text, encoding="utf-8")
     if png and pre:
         png = Path(png)
         png.parent.mkdir(parents=True, exist_ok=True)
-        with tempfile.TemporaryDirectory() as tmp:
-            src = Path(svg) if svg else Path(tmp, "diagram.svg")
-            if not svg:
-                src.write_text(text, encoding="utf-8")
-            svg_to_png(pre.rsvg, src, png)
+        # Conversion may create a partial file before failing. Stage it on the
+        # destination filesystem so a failed tool never damages an old output.
+        with tempfile.TemporaryDirectory(dir=png.parent) as tmp:
+            src, ready = Path(tmp, "diagram.svg"), Path(tmp, "diagram.png")
+            src.write_text(text, encoding="utf-8")
+            svg_to_png(pre.rsvg, src, ready)
+            if svg:
+                _write_svg(Path(svg), text)
+            os.replace(ready, png)
+    elif svg:
+        _write_svg(Path(svg), text)
     return text
+
+
+def _write_svg(path: Path, text: str) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fd, name = tempfile.mkstemp(dir=path.parent)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as stream:
+            stream.write(text)
+        os.replace(name, path)
+    finally:
+        Path(name).unlink(missing_ok=True)

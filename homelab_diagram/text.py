@@ -7,7 +7,7 @@ rsvg would then fall back to another face and every width would be off.
 """
 from __future__ import annotations
 
-import subprocess
+from .commands import CommandError, run
 from functools import lru_cache
 
 FC_TIMEOUT_S = 5
@@ -27,9 +27,8 @@ def tw_title(s: str, size: float) -> float:
 def fc_match(pattern: str, fmt: str) -> str | None:
     """One fontconfig lookup; None when fontconfig is unavailable."""
     try:
-        out = subprocess.run(["fc-match", "-f", fmt, pattern], capture_output=True, text=True,
-                             timeout=FC_TIMEOUT_S, check=False)
-    except (OSError, subprocess.SubprocessError):
+        out = run(["fc-match", "-f", fmt, pattern], timeout=FC_TIMEOUT_S)
+    except CommandError:
         return None
     return out.stdout.strip() or None
 

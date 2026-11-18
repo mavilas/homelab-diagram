@@ -11,12 +11,12 @@ import base64
 import os
 import re
 import shutil
-import subprocess
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 
 from .text import fc_match
+from .commands import CommandError, run
 
 MIN_LIBRSVG = (2, 60, 0)
 RSVG_ENV = "HOMELAB_DIAGRAM_RSVG"          # optional path to rsvg-convert
@@ -51,12 +51,15 @@ def parse_version(text: str) -> tuple[int, int, int]:
 
 
 def librsvg_version(exe: str) -> tuple[int, int, int]:
-    out = subprocess.run([exe, "--version"], capture_output=True, text=True, timeout=RSVG_TIMEOUT_S, check=False)
-    return parse_version(out.stdout + out.stderr)
+    try:
+        out = run([exe, "--version"], timeout=RSVG_TIMEOUT_S)
+    except CommandError:
+        raise PreflightError("rsvg-convert version check failed") from None
+    return parse_version(out.stdout)
 
 
 def svg_to_png(exe: str, svg: Path, png: Path, zoom: float = PNG_ZOOM) -> None:
-    subprocess.run([exe, "-z", str(zoom), "-o", str(png), str(svg)], check=True, timeout=RSVG_TIMEOUT_S)
+    run([exe, "-z", str(zoom), "-o", str(png), str(svg)], timeout=RSVG_TIMEOUT_S)
 
 
 def _probe_svg() -> str:

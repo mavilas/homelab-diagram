@@ -75,6 +75,34 @@ class SpecTest(unittest.TestCase):
         raw["links"][0]["to"] = "nowhere"
         self.assertRejected(raw, "unknown node or group 'nowhere'")
 
+    def test_schema_version_requires_an_integer(self):
+        for value in (True, 1.0):
+            with self.subTest(value=value):
+                raw = example_raw()
+                raw["version"] = value
+                self.assertRejected(raw, "spec.version")
+
+    def test_malformed_reference_types_fail_as_spec_errors(self):
+        for field in ("group", "from", "to", "speed", "color"):
+            with self.subTest(field=field):
+                raw = example_raw()
+                target = raw["nodes"][0] if field == "group" else raw["links"][0]
+                target[field] = []
+                self.assertRejected(raw, field)
+
+    def test_duplicate_document_keys_are_refused(self):
+        documents = {
+            ".json": '{"version":1,"version":1,"title":"x","nodes":[{"id":"x","label":"x"}]}',
+            ".yaml": 'version: 1\nversion: 1\ntitle: x\nnodes: [{id: x, label: x}]\n',
+        }
+        with tempfile.TemporaryDirectory() as tmp:
+            for extension, text in documents.items():
+                with self.subTest(extension=extension):
+                    path = Path(tmp, "spec" + extension)
+                    path.write_text(text)
+                    with self.assertRaisesRegex(SpecError, "duplicate"):
+                        load_spec(path)
+
     def test_version_device_type_and_bounds(self):
         raw = example_raw()
         raw["version"] = 2
