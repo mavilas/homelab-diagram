@@ -1,0 +1,35 @@
+name: test
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    container:
+      # Debian trixie ships librsvg 2.60; the same base digest as the reference image
+      image: python:3.12-slim-trixie@sha256:5e2bdb1b0d542d5039cffb8181c65930093949194a65c365dfb1b0fe13a4fa5b
+    env:
+      FIRA_URL: https://github.com/mozilla/Fira/archive/refs/tags/4.202.zip
+      FIRA_SHA256: 2d2fb71b186ddd4cdbbccca98ed9bd6a8a94bd05865f94b39b71af80eb3736a4
+    steps:
+      - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955  # v4.3.0
+      - name: System packages
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends librsvg2-bin fontconfig fonts-firacode curl unzip
+      - name: Fira Sans (pinned, sha256-checked)
+        run: |
+          curl -fsSL -o /tmp/fira.zip "$FIRA_URL"
+          echo "$FIRA_SHA256  /tmp/fira.zip" | sha256sum -c -
+          unzip -q /tmp/fira.zip -d /tmp && mkdir -p /usr/share/fonts/fira-sans
+          cp /tmp/Fira-4.202/ttf/FiraSans-*.ttf /usr/share/fonts/fira-sans/ && fc-cache -f
+      - name: Python packages
+        run: pip install --no-cache-dir pyyaml==6.0.3 pillow==13.0.0
+      - name: Icons (pinned commit, sha256-checked)
+        run: python3 fetch_icons.py
+      - name: Tests
+        run: python3 -m unittest discover -s tests -t . -v

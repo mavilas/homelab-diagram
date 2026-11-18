@@ -1,5 +1,11 @@
 # homelab-diagram
 
+> **Fork note.** This is `mavilas/homelab-diagram`, a fork of
+> [Goblinmine/homelab-diagram](https://github.com/Goblinmine/homelab-diagram) (MIT, "Copyright (c) 2026
+> Goblinmine"). The fork adds an importable style library, a declarative spec renderer with a headless CLI,
+> a librsvg preflight, pinned and hash-checked icons and tests. The original lab still renders byte for byte
+> as upstream did.
+
 The script behind the network diagram of my homelab that I posted on r/homelab. It turns a YAML file describing the lab into a big SVG/PNG diagram in the style of the diagrams you see on r/homelab.
 
 ![Example output](docs/example.png)
@@ -23,13 +29,16 @@ The script behind the network diagram of my homelab that I posted on r/homelab. 
 ## How it works
 
 - `inventory.yaml` holds everything the picture shows: VLANs, devices, switch ports, port forwards, hardware, containers, pools.
-- `build.py` draws the diagram as SVG with hand-placed coordinates, embeds the icons and converts it to PNG with `rsvg-convert`. Text widths for a few labels are measured with Pillow from the real font, so tabs and badges fit their text.
+- `build.py` draws the diagram as SVG with hand-placed coordinates (`original/top.py`, `original/server.py`, on top of the `homelab_diagram` library), embeds the icons and converts it to PNG with `rsvg-convert`. Text widths for a few labels are measured with Pillow from the real font, so tabs and badges fit their text.
 - **Redaction:** by default the real domain is replaced with `redacted.com` and SSIDs get generic names, so the PNG can be posted publicly. `python3 build.py --unredacted` renders a private version with the real values from `inventory.yaml`.
 
 ## Requirements
 
 - Python 3.11+ with **PyYAML** and **Pillow** (Pillow is optional, but makes label widths exact). Both are declared in `pyproject.toml`, so [uv](https://docs.astral.sh/uv/) installs them for you — see below.
-- **rsvg-convert** (librsvg) for the PNG
+- **rsvg-convert from librsvg 2.60 or newer** for the PNG. Older librsvg (Debian bookworm ships 2.54)
+  renders the cards but **silently drops every icon**. `build.py` and the CLI run a preflight that checks the
+  version and renders a probe icon, and stop with an error instead of writing an incomplete picture.
+  Debian trixie, current Arch and Homebrew ship 2.60 or newer.
 - the fonts **Fira Sans** and **Fira Code** installed (found via fontconfig)
 
 On Arch/CachyOS: `pacman -S python-yaml python-pillow librsvg ttf-fira-sans ttf-fira-code`
@@ -55,19 +64,73 @@ python3 build.py                # → out/homelab.svg + out/homelab.png (redacte
 python3 build.py --unredacted   # → out/homelab-unredacted.svg + .png
 ```
 
-The service icons are **not** in this repo, `fetch_icons.py` downloads them from [homarr-labs/dashboard-icons](https://github.com/homarr-labs/dashboard-icons). Only my own small glyphs (`icons/glyph-*.svg`: CPU, RAM, SSD, …) are included.
+The service icons are **not** in this repo, `fetch_icons.py` downloads them from [homarr-labs/dashboard-icons](https://github.com/homarr-labs/dashboard-icons) at the commit pinned in `icons.lock.json` and checks each file's sha256. Only my own small glyphs (`icons/glyph-*.svg`: CPU, RAM, SSD, …) are included.
+
+## Spec renderer and library (fork)
+
+Write a spec instead of moving coordinates around. The format is in [docs/spec.md](docs/spec.md); a full
+example is [examples/small-lab.yaml](examples/small-lab.yaml).
+
+```bash
+python3 fetch_icons.py                                    # pinned icons, sha256-checked (network)
+python3 -m homelab_diagram check --icon-dir icons         # librsvg >= 2.60, icons survive, fonts, icon lock
+python3 -m homelab_diagram validate examples/small-lab.yaml
+python3 -m homelab_diagram render examples/small-lab.yaml -o out/small-lab.png [--svg out/small-lab.svg]
+```
+
+Rendering is offline and deterministic: the same spec, icons, fonts and librsvg give the same bytes. It never
+opens a network connection; extra icon directories come from `--icons DIR` or `HOMELAB_DIAGRAM_ICON_DIRS`.
+Exit status is 0 on success, 1 when the spec, an icon, the layout or the renderer check fails, 2 on usage
+errors. Text that does not fit its card is an error, not an overflow.
+
+The drawing code is importable. The stable API is what `homelab_diagram/__init__.py` exports:
+
+| Area | Names |
+|---|---|
+| Themes | `Theme`, `DARK`, `LIGHT`, `THEMES` |
+| Primitives | `Canvas` (`rect`, `text`, `icon`, `line`, `trunk`, `arrow`, `pill`, `label`, `begin`, `finish`), `rounded` |
+| Pieces | `card`, `device_card`, `folder`, `hw_bar`, `zone`, `addr`, `tab_width`, `TAB` |
+| Icons | `IconStore`, `IconError` |
+| Specs | `Spec`, `Group`, `Node`, `Item`, `Link`, `LegendEntry`, `parse_spec`, `load_spec`, `SpecError` |
+| Layout and output | `draw`, `LayoutError`, `render`, `render_svg`, `preflight`, `PreflightError`, `MIN_LIBRSVG` |
+
+```python
+from homelab_diagram import Canvas, IconStore, DARK, card
+c = Canvas(1200, DARK, IconStore(["icons"]))
+c.begin()
+card(c, 40, 40, 400, 64, DARK.color("blue"), "Postgres", ["postgresql"], "primary")
+svg = c.finish(150)
+```
+
+### Icons are pinned
+
+`icons.lock.json` records the dashboard-icons commit, the URL template and the sha256 of every icon file.
+`fetch_icons.py` downloads only from that commit (never a branch) and rejects a file whose hash differs.
+`python3 fetch_icons.py --verify` checks an icons directory offline.
+
+### Tests
+
+```bash
+python3 fetch_icons.py && python3 -m unittest discover -s tests -t .
+```
+
+The suite needs the reference environment: Python 3.11+, PyYAML, Pillow, rsvg-convert 2.60+, Fira Sans
+and Fira Code, and the fetched icons. Tests that need it fail instead of skipping. It covers spec validation,
+the icon lock, the librsvg preflight (including a fake 2.54 and a fake converter that drops icons), a
+spec-to-PNG smoke render, byte-for-byte determinism and the original build's SVG against upstream.
+CI (`.github/workflows/test.yml`) runs it in Debian trixie.
 
 ## Making it your own
 
 1. Change `inventory.yaml` to your network. Texts, IPs, ports, VLAN colors and the container groups come from there.
-2. Look at the render. Things that don't fit are layout: the top part (cloud, ISP router, firewall, switch, device row) and the column split inside the server card are coordinates in `build.py` (search for `fy, fh`, `ox, oy`, `bx, by`, `DY`, `MAD = …`).
+2. Look at the render. Things that don't fit are layout: the top part (cloud, ISP router, firewall, switch, device row) and the column split inside the server card are coordinates in `original/top.py` and `original/server.py` (search for `fy, fh`, `ox, oy`, `bx, by`, `DY`, `MAD = …`).
 3. New icons: drop an SVG into `icons/` and use its file name in the inventory.
 
 ## Using it with Claude Code
 
 The repo contains a [`CLAUDE.md`](CLAUDE.md) with everything an AI agent needs to adapt it to your lab: how the code is structured, which parts of the layout are hardcoded, the questions to ask about your network, the render-and-check loop, and the design rules this diagram follows.
 
-Clone the repo, open it with [Claude Code](https://claude.com/claude-code) and say something like *"help me make this diagram for my homelab"*. It will interview you about your network (or read your docs if you have some), rewrite `inventory.yaml`, adapt `build.py` and iterate on the render with you. Other agents can use the same file as context.
+Clone the repo, open it with [Claude Code](https://claude.com/claude-code) and say something like *"help me make this diagram for my homelab"*. It will interview you about your network (or read your docs if you have some), write a spec and iterate on the render with you. In this fork the agent instructions forbid running commands on your hosts; the agent works only from your answers and documents. Other agents can use the same file as context.
 
 ## How it was made
 
@@ -95,6 +158,6 @@ About 60 prompts went into this. Three typical ones, to give an idea of how the 
 
 ## Credits & license
 
-- Code and the glyph icons in `icons/`: MIT, see [LICENSE](LICENSE).
+- Code and the glyph icons in `icons/`: MIT, Copyright (c) 2026 Goblinmine, see [LICENSE](LICENSE). Fork changes are under the same license.
 - Service icons: [homarr-labs/dashboard-icons](https://github.com/homarr-labs/dashboard-icons), downloaded by `fetch_icons.py`, not part of this repo. The logos belong to their projects.
 - Fonts: [Fira Sans / Fira Code](https://github.com/mozilla/Fira) (SIL Open Font License), not included.

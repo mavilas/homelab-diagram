@@ -1,7 +1,7 @@
 [project]
 name = "homelab-diagram"
-version = "0.1.0"
-description = "Render a homelab network diagram from a YAML inventory as SVG/PNG"
+version = "0.2.0"
+description = "Homelab-style diagrams: an importable style library and an offline YAML/JSON spec renderer"
 readme = "README.md"
 requires-python = ">=3.11"
 license = "MIT"
@@ -10,6 +10,12 @@ dependencies = [
     "pillow>=9.0",
 ]
 
-# This repository is a pair of scripts, not an importable package.
-[tool.uv]
-package = false
+[project.scripts]
+homelab-diagram = "homelab_diagram.cli:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["homelab_diagram"]

@@ -1,0 +1,44 @@
+# A small example lab for the spec renderer: python3 -m homelab_diagram render examples/small-lab.yaml -o out/small-lab.png
+version: 1
+title: Example homelab
+subtitle: spec renderer example
+footer: "rendered with homelab-diagram (MIT) · icons: dashboard-icons (Apache-2.0)"
+columns: 2
+groups:
+  - {id: edge, label: Edge, note: "firewall and reverse proxy", color: purple, columns: 2, span: 2}
+  - {id: compute, label: Compute, note: "hypervisor and containers", color: blue, columns: 1}
+  - {id: storage, label: Storage, note: "pools and backups", color: tan, columns: 1}
+nodes:
+  - {id: fw, label: fw, kind: device, type: firewall, model: "Mini PC · 4x 2.5G", address: "LAN + WAN", os: "OPNsense", icon: opnsense, group: edge}
+  - {id: proxy, label: Reverse proxy, note: "TLS for every web app", icon: traefik, group: edge}
+  - id: pve
+    label: pve
+    kind: device
+    type: hypervisor
+    model: "Tower · 64 GB"
+    address: "LAN"
+    os: "Proxmox VE"
+    icon: proxmox
+    group: compute
+    items:
+      - {label: Home Assistant, note: "automation", icon: homeassistant}
+      - {label: Grafana, note: "dashboards", icon: grafana}
+  - id: nas
+    label: nas
+    kind: device
+    type: storage
+    model: "4-bay NAS"
+    address: "LAN"
+    os: "TrueNAS SCALE"
+    icon: truenas
+    group: storage
+    items:
+      - {label: Backups, note: "nightly snapshots", icon: glyph-hdd}
+links:
+  - {from: fw, to: pve, speed: 10G, label: 10G}
+  - {from: fw, to: nas, speed: 1G, label: 1G}
+  - {from: proxy, to: pve, style: dashed, color: purple, label: proxies}
+legend:
+  - {label: "10G link", speed: 10G}
+  - {label: "1G link", speed: 1G}
+  - {label: "logical, not a cable", style: dashed, color: purple}
