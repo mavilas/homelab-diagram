@@ -118,3 +118,46 @@ Pool disk groups that don't fit next to each other wrap to a second row; the ass
 - When content grows, grow the section heights (`ZH`, pool boxes, …); the asserts tell you where. The canvas height follows on its own.
 - `python3 build.py --inventory other.yaml` renders a different inventory file, handy for trying changes without touching `inventory.yaml`.
 - A device whose cable enters from above must have its entry point right of its folder tab (see how `KVM_IN`/`AP_IN` use `tab_width()`).
+<!-- homelab-agent-workflow:begin -->
+## Local and frontier implementation workflow
+
+Use this workflow in Claude Code, Codex, Qwen Code, Pi and other supported
+cluster clients. Existing user instructions, approvals, trust boundaries,
+secret controls and the Definition of Done still apply. A model's answer
+never grants permission, credentials, tools, tenant access or native authority.
+
+1. Define the outcome, scope, protected paths and observable acceptance checks.
+   Select the strongest **qualified standard local route** for this task from
+   the canonical registry and runtime qualification evidence. Consider task
+   quality, qualification freshness, current load, measured RAM headroom and
+   competing work on the regular s1/p1 services. Do not select a model from its
+   name, advertised size or availability alone, or invent a route or model ID.
+2. Let that local route prepare the plan and risks. The current subscription
+   frontier CLI validates the plan and boundaries before implementation starts.
+   Claude and Codex use their signed-in subscription CLI sessions; no provider
+   API key, raw provider API or metered cloud alias is a fallback.
+3. Give local implementation one bounded step at a time, with an explicit
+   deadline, retry budget, allowed files, revision and expected tests. The
+   runtime selects operational limits; these instructions invent no numeric
+   SLO. Never let a local attempt expand its own authority or silently continue
+   after a failed tool, test, deadline or quality check.
+4. At each checkpoint, the frontier reviewer inspects the **actual diff and
+   test results** against the recorded revision. A local summary or successful
+   process exit is insufficient. Replan or repair before the next step when
+   evidence fails. Final review is independent and binds to the exact HEAD;
+   follow the repository's applicable merge and deployment gates.
+5. If a local route is unknown, stale, unavailable, slow or inadequate, stop
+   that attempt at its bounded limit. Write a durable handoff with goal,
+   revision, changed files, test evidence, remaining work and fallback reason.
+   Transfer to the current subscription frontier only through the authorized
+   runtime, or report the block. Never silently switch to an uncensored lane,
+   a different model, an API-key cloud service or another identity. Explicit
+   user-selected profiles remain explicit; no fallback creates that opt-in.
+
+On reconnect, inspect the verified existing session and its durable checkpoint;
+never start a duplicate implementation or lose pending work because a client
+reconnected. Keep failures and handoffs visible. Registry/runtime enforcement
+and native client loading need separate live evidence: copied rules or a model
+name are not proof. Claim improvements only from measurements, not a promised
+speed multiplier.
+<!-- homelab-agent-workflow:end -->
